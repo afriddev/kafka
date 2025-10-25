@@ -1,6 +1,6 @@
 # Kafka and FastAPI Messaging System
 
-## Overview
+### Overview
 
 This project establishes a production-grade messaging system using **Apache Kafka** in KRaft mode (without ZooKeeper) integrated with two **FastAPI** applications. Deployed on a **Debian-based Google Cloud Platform (GCP) VM**, the system ensures high throughput, fault tolerance, and scalability. The components include:
 
@@ -9,9 +9,7 @@ This project establishes a production-grade messaging system using **Apache Kafk
 - **Consumer**: A FastAPI application to consume messages from `test-topic` and display them on an HTML page.
 - **Storage**: Messages are stored persistently in Kafka logs (`/var/kafka/logs/test-topic-*`) with customizable retention policies.
 
-
-
-## Introduction to Apache Kafka
+### Introduction to Apache Kafka
 
 ### What is Kafka?
 
@@ -36,6 +34,7 @@ Kafka is used by thousands of organizations for applications like log aggregatio
 ### Why Kafka?
 
 Kafka is chosen for its:
+
 - **High Throughput**: Processes millions of messages per second.
 - **Fault Tolerance**: Replicated partitions prevent data loss.
 - **Scalability**: Scales horizontally by adding brokers or partitions.
@@ -46,6 +45,7 @@ Kafka is chosen for its:
 ### KRaft Mode
 
 Introduced in Kafka 2.8, **KRaft (Kafka Raft)** replaces ZooKeeper with a Raft-based consensus protocol for metadata management. Benefits include:
+
 - Simplified architecture (no external dependency).
 - Faster leader election and recovery.
 - Improved scalability for large clusters.
@@ -56,6 +56,7 @@ KRaft mode is ideal for production environments, reducing operational complexity
 ### Kafka Architecture
 
 Kafka’s architecture consists of:
+
 - **Brokers**: Servers that store data and serve clients. Each broker holds partitions of topics.
 - **Topics and Partitions**: Messages are organized into topics, split into partitions for parallel processing.
 - **Replication**: Each partition has replicas (leader and followers) for fault tolerance.
@@ -67,7 +68,7 @@ Kafka’s design allows it to handle high volumes of data with low latency, maki
 
 ---
 
-## Prerequisites
+### Prerequisites
 
 ### Hardware Requirements
 
@@ -105,23 +106,30 @@ Kafka’s design allows it to handle high volumes of data with low latency, maki
 
 ---
 
-## System Architecture
+### System Architecture
 
 ### Component Overview
 
 1. **Kafka Cluster**:
+
    - Multi-node setup (3 brokers recommended for production).
    - Hosts `test-topic` with 6 partitions and replication factor 3.
    - Uses KRaft mode for metadata management.
+
 2. **Producer FastAPI App**:
+
    - Exposes `/send` endpoint to publish JSON messages to `test-topic`.
    - Uses `aiokafka` for asynchronous Kafka integration.
    - Runs on port `8001`.
+
 3. **Consumer FastAPI App**:
+
    - Consumes messages from `test-topic` using the `test-group` consumer group.
    - Displays the last 10 messages on an HTML page via `/` endpoint.
    - Runs on port `8002`.
+
 4. **Storage**:
+
    - Messages stored in `/var/kafka/logs/test-topic-*`.
    - Configurable retention (e.g., 7 days or 1GB per partition).
 
@@ -132,328 +140,222 @@ Kafka’s design allows it to handle high volumes of data with low latency, maki
 3. Consumer reads messages from `test-topic`, maintaining offsets in the `test-group`.
 4. Consumer displays messages on an HTML page.
 
----
+### Apache Kafka 2-Broker Cluster Setup Guide
 
-## Production-Grade Configuration
+### Overview
 
-### Multi-Node Kafka Cluster
-
-1. **Deploy Brokers**:
-   - Set up 3 VMs (e.g., `broker1`, `broker2`, `broker3`).
-   - Configure `server.properties` for each broker:
-     ```properties
-     # broker1 (/path/to/kafka/config/kraft/server.properties)
-     broker.id=1
-     node.id=1
-     controller.quorum.voters=1@broker1:9092,2@broker2:9093,3@broker3:9094
-     listeners=PLAINTEXT://broker1:9092
-     advertised.listeners=PLAINTEXT://broker1:9092
-     log.dirs=/var/kafka/logs
-     num.partitions=6
-     default.replication.factor=3
-     ```
-     Repeat for `broker.id=2` (port `9093`) and `broker.id=3` (port `9094`).
-
-2. **Start Brokers**:
-   - Format storage on each broker:
-     ```bash
-     export KAFKA_CLUSTER_ID="$(/path/to/kafka/bin/kafka-storage.sh random-uuid)"
-     /path/to/kafka/bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c /path/to/kafka/config/kraft/server.properties
-     ```
-   - Start Kafka:
-     ```bash
-     /path/to/kafka/bin/kafka-server-start.sh /path/to/kafka/config/kraft/server.properties &
-     ```
-
-### Topic Configuration
-
-- Create `test-topic` with 6 partitions and replication factor 3:
-  ```bash
-  /path/to/kafka/bin/kafka-topics.sh --create --topic test-topic --bootstrap-server broker1:9092 --partitions 6 --replication-factor 3
-  ```
-
-### Retention Policies
-
-- Configure in `server.properties`:
-  ```properties
-  log.retention.hours=168  # 7 days
-  log.retention.bytes=1073741824  # 1GB per partition
-  log.retention.check.interval.ms=300000  # Check every 5 minutes
-  ```
-
-### Performance Tuning
-
-- **Memory**:
-  ```bash
-  export KAFKA_HEAP_OPTS="-Xmx4g -Xms4g"
-  ```
-- **Threads**:
-  ```properties
-  num.io.threads=8
-  num.network.threads=3
-  ```
-- **Compression**:
-  ```properties
-  compression.type=gzip
-  ```
-- **Log Segment Size**:
-  ```properties
-  log.segment.bytes=1073741824  # 1GB per segment
-  ```
-
-### Systemd Integration
-
-- Create a systemd service for each Kafka broker:
-  ```bash
-  sudo nano /etc/systemd/system/kafka.service
-  ```
-  ```ini
-  [Unit]
-  Description=Apache Kafka Server
-  After=network.target
-
-  [Service]
-  Type=simple
-  Environment="KAFKA_HEAP_OPTS=-Xmx4g -Xms4g"
-  ExecStart=/path/to/kafka/bin/kafka-server-start.sh /path/to/kafka/config/kraft/server.properties
-  ExecStop=/path/to/kafka/bin/kafka-server-stop.sh
-  Restart=on-failure
-
-  [Install]
-  WantedBy=multi-user.target
-  ```
-  ```bash
-  sudo systemctl enable kafka
-  sudo systemctl start kafka
-  ```
-
-- Create systemd services for FastAPI apps:
-  ```bash
-  sudo nano /etc/systemd/system/producer.service
-  ```
-  ```ini
-  [Unit]
-  Description=FastAPI Producer
-  After=network.target
-
-  [Service]
-  User=your_user
-  WorkingDirectory=/path/to/producer
-  ExecStart=/path/to/venv/bin/uvicorn main_producer:app --host 0.0.0.0 --port 8001 --workers 4
-  Restart=always
-
-  [Install]
-  WantedBy=multi-user.target
-  ```
-  Repeat for `consumer.service` (port `8002`).
-
-### FastAPI Scaling
-
-- Run with multiple workers:
-  ```bash
-  /path/to/venv/bin/uvicorn main_producer:app --host 0.0.0.0 --port 8001 --workers 4
-  ```
-- Deploy behind NGINX for load balancing:
-  ```nginx
-  upstream producer {
-      server 127.0.0.1:8001;
-      server 127.0.0.1:8003;  # Additional instance
-  }
-
-  server {
-      listen 80;
-      server_name producer.example.com;
-      location / {
-          proxy_pass http://producer;
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-      }
-  }
-  ```
-
-### Load Balancing
-
-- Use NGINX to balance Kafka traffic across brokers:
-  ```nginx
-  upstream kafka {
-      server broker1:9092;
-      server broker2:9093;
-      server broker3:9094;
-  }
-  ```
+This guide explains how to set up a **2-broker Apache Kafka cluster** using KRaft mode, suitable for small production or development environments.  
+ It includes installation, configuration, startup, topic creation, and verification steps.
 
 ---
 
-## Setup Instructions
+### Prerequisites
+
+- Ubuntu/Debian system
+- Java 11+ installed
+- Minimum 16GB RAM and SSD recommended
+
+## Launching Apache Kafka with KRaft Mode on Ubuntu 22.04 And 2 Brokers
 
 ### Install Java
 
 ```bash
-sudo apt update
 sudo apt install -y default-jre
+java -version
+# If the output shows a version lower than 11
+sudo apt install -y openjdk-11-jre
 java -version
 ```
 
-### Install Kafka
-
-1. Download Kafka 3.9.1:
-   ```bash
-   wget https://downloads.apache.org/kafka/3.9.1/kafka_2.13-3.9.1.tgz
-   tar -xzf kafka_2.13-3.9.1.tgz
-   mv kafka_2.13-3.9.1 /path/to/kafka
-   ```
-
-2. Create log directory:
-   ```bash
-   sudo mkdir -p /var/kafka/logs
-   sudo chown $USER:$USER /var/kafka/logs
-   ```
-
-### Set Up Python Environment
-
-1. Create and activate virtual environment:
-   ```bash
-   python3 -m venv ~/kafka/venv
-   source ~/kafka/venv/bin/activate
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install fastapi uvicorn aiokafka python-dotenv markdown2 weasyprint
-   ```
-
-### Configure Kafka
-
-1. Generate cluster ID:
-   ```bash
-   export KAFKA_CLUSTER_ID="$(/path/to/kafka/bin/kafka-storage.sh random-uuid)"
-   ```
-
-2. Format storage:
-   ```bash
-   /path/to/kafka/bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c /path/to/kafka/config/kraft/server.properties
-   ```
-
-3. Start Kafka (repeat for each broker):
-   ```bash
-   /path/to/kafka/bin/kafka-server-start.sh /path/to/kafka/config/kraft/server.properties &
-   ```
-
-4. Create topic:
-   ```bash
-   /path/to/kafka/bin/kafka-topics.sh --create --topic test-topic --bootstrap-server broker1:9092 --partitions 6 --replication-factor 3
-   ```
-
-### Deploy FastAPI Apps
-
-- See [Producer FastAPI Application](#producer-fastapi-application) and [Consumer FastAPI Application](#consumer-fastapi-application) for code and deployment details.
-
-### Configure GCP Firewall
+### Download Kafka
 
 ```bash
-gcloud compute firewall-rules create allow-kafka --allow tcp:9092-9094
-gcloud compute firewall-rules create allow-producer --allow tcp:8001
-gcloud compute firewall-rules create allow-consumer --allow tcp:8002
+wget https://downloads.apache.org/kafka/3.9.1/kafka_2.13-3.9.1.tgz
+tar -xzf kafka_2.13-3.9.1.tgz
+sudo mv kafka_2.13-3.9.1 /opt/kafka
 ```
 
----
+### Set kafka logs directory and add permissions
 
-## Producer FastAPI Application
-
-### Producer Code
-
-**File**: `main_producer.py`
-
-```python
-from fastapi import FastAPI
-from aiokafka import AIOKafkaProducer
-import json
-from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-app = FastAPI()
-producer = None
-
-@app.on_event("startup")
-async def startup():
-    global producer
-    bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker1:9092,broker2:9093,broker3:9094")
-    producer = AIOKafkaProducer(bootstrap_servers=bootstrap_servers)
-    await producer.start()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await producer.stop()
-
-@app.post("/send")
-async def send_message(msg: dict):
-    await producer.send('test-topic', json.dumps(msg).encode('utf-8'))
-    return JSONResponse({"status": "sent"})
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+```bash
+  sudo mkdir -p /var/kafka/logs
+  sudo chown $USER:$USER /var/kafka/logs
+  sudo chmod 755 /var/kafka/logs
 ```
+
+### Create Log Directories for Each Broker
+
+Each broker needs its own log directory to store messages and metadata. We’ll create separate directories (/var/kafka/logs/broker1, /var/kafka/logs/broker2, etc.) to avoid conflicts.
+
+```bash
+ sudo mkdir -p /var/kafka/logs/{broker1,broker2}
+ sudo chown $USER:$USER /var/kafka/logs/broker{1,2}
+ sudo chmod 755 /var/kafka/logs/broker{1,2}
+```
+
+### Generate and Save the Cluster ID
+
+```bash
+export KAFKA_CLUSTER_ID=$(/opt/kafka/bin/kafka-storage.sh random-uuid)
+echo $KAFKA_CLUSTER_ID > ~/kafka_cluster_id.txt
+cat ~/kafka_cluster_id.txt
+```
+
+### Configure `server.properties` for Each Broker
+
+Create and configure a server.properties file for each broker with unique settings (ports, IDs, log directories) and a shared KRaft.
+
+```bash
+sudo cp /opt/kafka/config/kraft/server.properties /opt/kafka/config/kraft/server-broker1.properties
+sudo cp /opt/kafka/config/kraft/server.properties /opt/kafka/config/kraft/server-broker2.properties
+```
+
+### Clean Up Extra Configuration Files
+
+Remove unnecessary configuration files from /opt/kafka/config/kraft/ to avoid confusion, keeping only server-broker{1,2}.properties. Verify that all broker configurations are correct.
+
+```bash
+sudo rm /opt/kafka/config/kraft/broker.properties
+sudo rm /opt/kafka/config/kraft/controller.properties
+sudo rm /opt/kafka/config/kraft/reconfig-server.properties
+sudo rm /opt/kafka/config/kraft/server.properties
+```
+
+### Edit each file with production settings:
+
+```bash
+sudo nano /opt/kafka/config/kraft/server-broker1.properties
+```
+
+Replace the entire content with
+
+```bash
+process.roles=broker,controller
+node.id=1
+controller.quorum.voters=1@localhost:10092,2@localhost:10093
+listeners=PLAINTEXT://localhost:9092,CONTROLLER://localhost:10092
+advertised.listeners=PLAINTEXT://localhost:9092
+inter.broker.listener.name=PLAINTEXT
+controller.listener.names=CONTROLLER
+listener.security.protocol.map=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+log.dirs=/var/kafka/logs/broker1
+num.partitions=4
+default.replication.factor=2
+offsets.topic.replication.factor=2
+transaction.state.log.replication.factor=2
+transaction.state.log.min.isr=2
+num.network.threads=2
+num.io.threads=4
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+log.retention.hours=168
+log.retention.bytes=1073741824
+log.segment.bytes=1073741824
+log.retention.check.interval.ms=300000
+compression.type=gzip
+```
+
+Do the same for all remaining brokers. Just make sure to change the following settings for each broker:
+
+- `node.id` (2 for broker2)
+- `listeners` and `advertised.listeners` ports (9093 for broker2)
+- `log.dirs` to point to the respective broker log directory (broker2)
+- `controller ports` (10093 for broker2)
+
+### Confirm that all 2 `server-broker*.properties` files are configured correctly
+
+```bash
+cat /opt/kafka/config/kraft/server-broker*.properties | grep -E 'node.id|listeners|log.dirs'
+```
+
+### Format Storage for Each Broker
+
+Format the storage for each broker’s log directory using the `KAFKA_CLUSTER_ID`
+
+```bash
+export KAFKA_CLUSTER_ID=$(cat ~/kafka_cluster_id.txt)
+sudo rm -rf /var/kafka/logs/broker1 /var/kafka/logs/broker2
+/opt/kafka/bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c /opt/kafka/config/kraft/server-broker1.properties
+/opt/kafka/bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c /opt/kafka/config/kraft/server-broker2.properties
+
+```
+
+### Start All 2 Brokers
+
+Start each broker with 4GB of memory (ensure VM has 16GB+ RAM).
+
+```bash
+export KAFKA_HEAP_OPTS="-Xmx4g -Xms4g"
+/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server-broker1.properties &
+/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server-broker2.properties &
+```
+
+### Verify Brokers are Running
+
+Check the logs to ensure each broker has started successfully.
+
+```bash
+ps aux | grep kafka
+```
+
+### Create Topic (4 Partitions, 2 Replicas)
+
+Create a topic named `test-topic` with 4 partitions and a replication factor of 2.
+
+```bash
+/opt/kafka/bin/kafka-topics.sh --create --topic test-topic \
+--replica-assignment 1:2,2:1,1:2,2:1 \
+--bootstrap-server localhost:9092,localhost:9093
+```
+
+Verify the topic was created successfully.
+
+```bash
+/opt/kafka/bin/kafka-topics.sh --describe --topic test-topic --bootstrap-server localhost:9092
+/opt/kafka/bin/kafka-topics.sh --describe --topic test-topic --bootstrap-server localhost:9093
+```
+
+### Producer FastAPI Application
+
+### Create and activate venv
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # (Windows: venv\Scripts\activate)
+```
+
+### Install dependencies
+
+```bash
+pip install fastapi uvicorn aiokafka python-dotenv python-multipart
+```
+
+**File**: [producer.py](producer.py)
+
+````
 
 ### Producer Deployment
 
 ```bash
 source ~/kafka/venv/bin/activate
 python main_producer.py
-```
+````
 
 ### Producer Configuration
 
 - Create `.env` file:
   ```env
-  KAFKA_BOOTSTRAP_SERVERS=broker1:9092,broker2:9093,broker3:9094
+  KAFKA_BOOTSTRAP_SERVERS=localhost:9092,localhost:9093
   ```
 
 ---
 
-## Consumer FastAPI Application
+### Consumer FastAPI Application
 
 ### Consumer Code
 
-**File**: `main_consumer.py`
-
-```python
-from fastapi import FastAPI
-from aiokafka import AIOKafkaConsumer
-import asyncio
-import json
-from fastapi.responses import HTMLResponse
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-app = FastAPI()
-messages = []
-
-@app.on_event("startup")
-async def startup():
-    bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker1:9092,broker2:9093,broker3:9094")
-    consumer = AIOKafkaConsumer('test-topic', bootstrap_servers=bootstrap_servers, group_id='test-group')
-    await consumer.start()
-    asyncio.create_task(consume(consumer))
-
-async def consume(consumer):
-    async for msg in consumer:
-        messages.append(json.loads(msg.value.decode('utf-8')))
-
-@app.get("/", response_class=HTMLResponse)
-async def read_root():
-    html = "<html><body><h1>Kafka Messages</h1><ul>" + "".join([f"<li>{m}</li>" for m in messages[-10:]]) + "</ul></body></html>"
-    return HTMLResponse(content=html)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)
-```
+**File**: [consumer.py](consumer.py)
 
 ### Consumer Deployment
 
@@ -466,19 +368,10 @@ python main_consumer.py
 
 - Use the same `.env` file as the producer.
 
----
-
-## Testing the System
-
-### Verify Kafka
-
-```bash
-/path/to/kafka/bin/kafka-topics.sh --list --bootstrap-server broker1:9092
-```
-
 ### Send Messages
 
 - Use `curl` or Postman:
+
   ```bash
   curl -X POST http://localhost:8001/send -H "Content-Type: application/json" -d '{"key": "Hello Kafka!"}'
   ```
@@ -495,7 +388,7 @@ python main_consumer.py
 
 ---
 
-## Message Storage and Retention
+### Message Storage and Retention
 
 ### Storage Location
 
@@ -523,7 +416,7 @@ python main_consumer.py
 
 ---
 
-## Monitoring and Maintenance
+### Monitoring and Maintenance
 
 ### Monitoring Tools
 
@@ -580,7 +473,7 @@ python main_consumer.py
 
 ---
 
-## Scaling Kafka
+### Scaling Kafka
 
 ### Adding Brokers
 
@@ -608,7 +501,7 @@ python main_consumer.py
 
 ---
 
-## Security Considerations
+### Security Considerations
 
 ### Network Security
 
@@ -632,141 +525,3 @@ python main_consumer.py
   sasl.enabled.mechanisms=PLAIN
   sasl.mechanism.inter.broker.protocol=PLAIN
   ```
-
-### FastAPI Security
-
-- Use HTTPS with NGINX:
-  ```nginx
-  server {
-      listen 443 ssl;
-      server_name producer.example.com;
-      ssl_certificate /path/to/cert.pem;
-      ssl_certificate_key /path/to/key.pem;
-      location / {
-          proxy_pass http://127.0.0.1:8001;
-      }
-  }
-  ```
-- Add API key authentication to `/send`:
-  ```python
-  from fastapi.security import APIKeyHeader
-  api_key_header = APIKeyHeader(name="X-API-Key")
-  @app.post("/send")
-  async def send_message(msg: dict, api_key: str = Depends(api_key_header)):
-      if api_key != "your-secret-key":
-          raise HTTPException(status_code=401, detail="Invalid API Key")
-      await producer.send('test-topic', json.dumps(msg).encode('utf-8'))
-      return JSONResponse({"status": "sent"})
-  ```
-
----
-
-## Troubleshooting
-
-### Common Kafka Issues
-
-- **Broker Not Starting**:
-  - Check `/path/to/kafka/logs/server.log`.
-  - Ensure `KAFKA_CLUSTER_ID` is set and storage is formatted.
-  - Verify port `9092` is not in use: `netstat -tuln | grep 9092`.
-- **Topic Creation Fails**:
-  - Ensure all brokers are running.
-  - Check `bootstrap-server` address.
-
-### Common FastAPI Issues
-
-- **Connection Errors**:
-  - Verify Kafka brokers are accessible: `telnet broker1 9092`.
-  - Check `.env` for correct `KAFKA_BOOTSTRAP_SERVERS`.
-- **No Messages Displayed**:
-  - Ensure consumer is in `test-group`.
-  - Check consumer logs for errors.
-
-### Debugging Tips
-
-- View Kafka logs: `/path/to/kafka/logs/server.log`.
-- Use console consumer for debugging:
-  ```bash
-  /path/to/kafka/bin/kafka-console-consumer.sh --topic test-topic --bootstrap-server broker1:9092 --from-beginning
-  ```
-- Check consumer group status:
-  ```bash
-  /path/to/kafka/bin/kafka-consumer-groups.sh --bootstrap-server broker1:9092 --group test-group --describe
-  ```
-
----
-
-## Best Practices
-
-### Kafka Best Practices
-
-- Use at least 3 brokers for fault tolerance.
-- Set replication factor to 3 for critical topics.
-- Monitor consumer lag and broker health.
-- Use compression (e.g., `gzip`) for high-throughput topics.
-- Regularly back up topic data.
-
-### FastAPI Best Practices
-
-- Use environment variables for configuration.
-- Implement rate limiting and authentication.
-- Deploy behind a reverse proxy (e.g., NGINX).
-- Use multiple workers for high traffic.
-
----
-
-## Access Points
-
-- **Kafka Brokers**: `broker1:9092`, `broker2:9093`, `broker3:9094`.
-- **Producer API**: `http://localhost:8001/send` (POST).
-- **Consumer UI**: `http://localhost:8002` (GET).
-
----
-
-## References
-
-- [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [AIOKafka Documentation](https://aiokafka.readthedocs.io/)
-- [GCP Networking](https://cloud.google.com/vpc/docs)
-- [WeasyPrint Documentation](https://weasyprint.readthedocs.io/)
-
----
-
-## Advanced Topics
-
-### Kafka Streams
-
-Kafka Streams is a client library for building stream-processing applications. It allows processing data in real-time directly from Kafka topics.
-
-### Kafka Connect
-
-Kafka Connect is a framework for integrating Kafka with external systems (e.g., databases, cloud storage). Use it to stream data to/from `test-topic`.
-
-### Schema Registry
-
-Confluent Schema Registry ensures data compatibility by managing message schemas. Recommended for production to enforce data contracts.
-
----
-
-## Appendix
-
-### Kafka Configuration Options
-
-- `broker.id`: Unique ID for each broker.
-- `log.retention.hours`: Time-based retention for logs.
-- `num.partitions`: Default number of partitions for new topics.
-- `default.replication.factor`: Default replication factor.
-
-### FastAPI Configuration Options
-
-- `--workers`: Number of Uvicorn workers.
-- `--host`: Bind address (e.g., `0.0.0.0`).
-- `--port`: Port for the application.
-
-### Glossary
-
-- **KRaft**: Kafka Raft protocol for metadata management.
-- **Partition**: A division of a topic’s messages.
-- **Replication**: Copying partitions across brokers.
-- **Consumer Group**: A group of consumers sharing a topic’s load.
