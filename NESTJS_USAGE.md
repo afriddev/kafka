@@ -1,5 +1,4 @@
 # NestJS Kafka Integration Guide
-
 ## Installation
 
 ```bash
