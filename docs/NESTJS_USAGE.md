@@ -257,7 +257,7 @@ KAFKA_BOOTSTRAP_SERVERS=192.168.1.100:30092
 For inside K8s cluster:
 
 ```env
-KAFKA_BOOTSTRAP_SERVERS=his-kafka-0.his-kafka-headless.his-kafka.svc.cluster.local:9092
+KAFKA_BOOTSTRAP_SERVERS=k3s-kafka-0.k3s-kafka-headless.k3s-kafka.svc.cluster.local:9092
 ```
 
 ## App Module Integration
@@ -369,14 +369,14 @@ export class EventsController {
 #### Check Kafka Connection
 
 ```bash
-kubectl get svc -n his-kafka
-kubectl get svc his-kafka-cluster-kafka-external-bootstrap -n his-kafka
+kubectl get svc -n k3s-kafka
+kubectl get svc k3s-kafka-cluster-kafka-external-bootstrap -n k3s-kafka
 ```
 
 #### Send Test Message via CLI
 
 ```bash
-kubectl exec -i -n his-kafka his-kafka-0 -- \
+kubectl exec -i -n k3s-kafka k3s-kafka-0 -- \
   kafka-console-producer \
   --topic hospital \
   --bootstrap-server localhost:9092 \
@@ -393,7 +393,7 @@ hosp-001:{"action":"CREATE","name":"Test Hospital"}
 #### Consume Messages via CLI
 
 ```bash
-kubectl exec -n his-kafka his-kafka-0 -- \
+kubectl exec -n k3s-kafka k3s-kafka-0 -- \
   kafka-console-consumer \
   --topic hospital \
   --from-beginning \

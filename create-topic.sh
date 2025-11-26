@@ -11,7 +11,7 @@ PARTITIONS=3
 
 echo "Creating topic '$TOPIC' with $PARTITIONS partitions..."
 
-kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --create \
+kubectl exec -n k3s-kafka k3s-kafka-0 -- kafka-topics --create \
   --bootstrap-server localhost:9092 \
   --topic $TOPIC \
   --partitions $PARTITIONS \
@@ -22,4 +22,4 @@ kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --create \
 
 echo "✅ Topic '$TOPIC' created successfully!"
 echo "Current topics:"
-kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
+kubectl exec -n k3s-kafka k3s-kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list

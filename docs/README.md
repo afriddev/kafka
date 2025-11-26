@@ -29,7 +29,7 @@ This project provides a production-ready Apache Kafka deployment on Kubernetes u
 ## Architecture
 
 #### Namespace
-All components deploy to the his-kafka namespace.
+All components deploy to the k3s-kafka namespace.
 
 #### Storage
 - StorageClass: kafka-local-storage using local-path provisioner
@@ -40,7 +40,7 @@ All components deploy to the his-kafka namespace.
 - Development: 1 broker, 1 partition, 1 replica
 - Production: 2+ brokers, 4+ partitions, 2+ replicas
 - NodePort access on port 30092 for external connectivity
-- Internal access via his-kafka-cluster-kafka-bootstrap:9092
+- Internal access via k3s-kafka-cluster-kafka-bootstrap:9092
 
 #### Topics
 - hospital: Hospital creation and update events
@@ -51,7 +51,7 @@ All components deploy to the his-kafka namespace.
 ## Directory Structure
 
 ```
-his-kafka/
+k3s-kafka/
 ├── namespace/
 │   └── namespace.yaml
 ├── storage/
@@ -101,9 +101,9 @@ bash deploy.sh
 3. Verify deployment:
 
 ```bash
-kubectl get pods -n his-kafka
-kubectl get svc -n his-kafka
-kubectl get kafkatopic -n his-kafka
+kubectl get pods -n k3s-kafka
+kubectl get svc -n k3s-kafka
+kubectl get kafkatopic -n k3s-kafka
 ```
 
 #### GitLab CI/CD Deployment
@@ -153,7 +153,7 @@ KAFKA_BOOTSTRAP_SERVERS=192.168.1.100:30092
 Using internal service:
 
 ```
-KAFKA_BOOTSTRAP_SERVERS=his-kafka-0.his-kafka-headless.his-kafka.svc.cluster.local:9092
+KAFKA_BOOTSTRAP_SERVERS=k3s-kafka-0.k3s-kafka-headless.k3s-kafka.svc.cluster.local:9092
 ```
 
 ## NestJS Integration
@@ -185,14 +185,14 @@ await this.kafkaClient.emit('hospital', {
 #### Check Cluster Status
 
 ```bash
-kubectl get kafka -n his-kafka
-kubectl get pods -n his-kafka
+kubectl get kafka -n k3s-kafka
+kubectl get pods -n k3s-kafka
 ```
 
 #### List Topics
 
 ```bash
-kubectl exec -n his-kafka his-kafka-0 -- \
+kubectl exec -n k3s-kafka k3s-kafka-0 -- \
   kafka-topics --list \
   --bootstrap-server localhost:9092
 ```
@@ -200,7 +200,7 @@ kubectl exec -n his-kafka his-kafka-0 -- \
 #### Send Test Message
 
 ```bash
-kubectl exec -i -n his-kafka his-kafka-0 -- \
+kubectl exec -i -n k3s-kafka k3s-kafka-0 -- \
   kafka-console-producer \
   --topic hospital \
   --bootstrap-server localhost:9092
@@ -211,7 +211,7 @@ Type your message and press Enter.
 #### Consume Messages
 
 ```bash
-kubectl exec -n his-kafka his-kafka-0 -- \
+kubectl exec -n k3s-kafka k3s-kafka-0 -- \
   kafka-console-consumer \
   --topic hospital \
   --from-beginning \
@@ -244,19 +244,19 @@ Note: Producer and consumer deployments reference placeholder images. Update ima
 #### Pod Logs
 
 ```bash
-kubectl logs -n his-kafka <pod-name>
+kubectl logs -n k3s-kafka <pod-name>
 ```
 
 #### Kafka Broker Logs
 
 ```bash
-kubectl logs -n his-kafka his-kafka-0
+kubectl logs -n k3s-kafka k3s-kafka-0
 ```
 
 #### Consumer Group Status
 
 ```bash
-kubectl exec -n his-kafka his-kafka-0 -- \
+kubectl exec -n k3s-kafka k3s-kafka-0 -- \
   kafka-consumer-groups \
   --bootstrap-server localhost:9092 \
   --group his-consumer-group \
@@ -269,8 +269,8 @@ kubectl exec -n his-kafka his-kafka-0 -- \
 
 Check events and logs:
 ```bash
-kubectl describe pod <pod-name> -n his-kafka
-kubectl logs <pod-name> -n his-kafka
+kubectl describe pod <pod-name> -n k3s-kafka
+kubectl logs <pod-name> -n k3s-kafka
 ```
 
 #### Storage Issues
@@ -278,7 +278,7 @@ kubectl logs <pod-name> -n his-kafka
 Verify PV and PVC status:
 ```bash
 kubectl get pv
-kubectl get pvc -n his-kafka
+kubectl get pvc -n k3s-kafka
 ```
 
 Ensure storage directory exists on node:
@@ -290,21 +290,21 @@ ls -la /mnt/ssd/kafka/
 
 Check Strimzi operator:
 ```bash
-kubectl get deployment strimzi-cluster-operator -n his-kafka
-kubectl logs deployment/strimzi-cluster-operator -n his-kafka
+kubectl get deployment strimzi-cluster-operator -n k3s-kafka
+kubectl logs deployment/strimzi-cluster-operator -n k3s-kafka
 ```
 
 #### Topic Not Created
 
 Verify Kafka cluster is ready:
 ```bash
-kubectl get kafka his-kafka-cluster -n his-kafka
+kubectl get kafka k3s-kafka-cluster -n k3s-kafka
 ```
 
 Check topic status:
 ```bash
-kubectl get kafkatopic -n his-kafka
-kubectl describe kafkatopic hospital -n his-kafka
+kubectl get kafkatopic -n k3s-kafka
+kubectl describe kafkatopic hospital -n k3s-kafka
 ```
 
 ## Cleanup
@@ -312,7 +312,7 @@ kubectl describe kafkatopic hospital -n his-kafka
 Remove all Kafka resources:
 
 ```bash
-kubectl delete namespace his-kafka
+kubectl delete namespace k3s-kafka
 ```
 
 Note: This does not delete PersistentVolumes. To remove data:

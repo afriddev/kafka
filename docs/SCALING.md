@@ -1,34 +1,118 @@
-## Scaling Kafka
+## Scaling Kafka Guide
 
-#### Understanding Brokers and Clusters
+This guide explains how to scale your Kafka cluster from 1 broker to 3 brokers.
 
-When we talk about scaling, we mean adding more power to our system. A cluster is a group of computers working together. In Kafka, these computers are called brokers.
+#### 1. Create New Storage Directories (setup.sh)
 
-If we have 3 brokers in our cluster, they work as a team. When you send data to Kafka, it does not just go to one place. It gets copied to multiple brokers. This is called replication.
+You need to create storage folders for the new brokers. **Do not touch the existing broker-0 folder.**
 
-#### How Topics are Distributed
+Update your `setup.sh` to include the new folders:
 
-When you create a topic, you want it to be safe. If you have 3 brokers, you should set your topic to be on all 3 brokers.
+```bash
+# Existing broker-0 (Do not remove)
+mkdir -p /host/mnt/ssd/kafka/broker-0
 
-This means if one broker fails or crashes, the other two still have your data. The system keeps working without stopping. This is what we mean by high availability.
+# Add these lines for new brokers
+mkdir -p /host/mnt/ssd/kafka/broker-1
+mkdir -p /host/mnt/ssd/kafka/broker-2
 
-#### Leader and Followers
+# Set permissions for all
+chmod -R 755 /host/mnt/ssd/kafka
+chown -R 1000:1000 /host/mnt/ssd/kafka
+```
 
-In this team of 3 brokers, for each piece of data, one broker is the Leader. The others are Followers.
+#### 2. Create New Persistent Volumes
 
-The Leader handles all the work. The Followers just copy everything the Leader does to stay in sync.
+You need to create new PV files for the new brokers.
 
-If the Leader crashes, one of the Followers immediately becomes the new Leader. This happens automatically so your application does not stop working.
+**Create file: `storage/pv-broker-1.yaml`**
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kafka-broker-1-pv
+  labels:
+    type: local
+    broker-id: "1"
+spec:
+  storageClassName: kafka-local-storage
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/ssd/kafka/broker-1
+```
 
-#### Adding More Brokers
+**Create file: `storage/pv-broker-2.yaml`**
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kafka-broker-2-pv
+  labels:
+    type: local
+    broker-id: "2"
+spec:
+  storageClassName: kafka-local-storage
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/ssd/kafka/broker-2
+```
 
-If you need more speed or space, you can add more brokers.
+#### 3. Update Deployment Script (deploy.sh)
 
-When you add a new broker, Kafka can move some work to it. This helps balance the load so no single broker is doing too much.
+Update `deploy.sh` to apply these new PVs before deploying the StatefulSet.
 
-#### Summary of Requirements
+```bash
+# Apply storage
+kubectl apply -f storage/pv-broker-0.yaml
+kubectl apply -f storage/pv-broker-1.yaml  # Add this
+kubectl apply -f storage/pv-broker-2.yaml  # Add this
+```
 
-To make this work, you need:
-1. Multiple brokers (computers) in your cluster.
-2. Topics configured to use these brokers (replication factor).
-3. Storage space for each broker.
+#### 4. Update Kafka Configuration (kafka-config.yaml)
+
+Update `kafka/kafka-config.yaml` to increase replication factors.
+
+```properties
+# Change these values
+offsets.topic.replication.factor=3
+transaction.state.log.replication.factor=3
+transaction.state.log.min.isr=2
+default.replication.factor=3
+min.insync.replicas=2
+```
+
+#### 5. Update StatefulSet (kafka-statefulset.yaml)
+
+Update `kafka/kafka-statefulset.yaml` to increase the replica count.
+
+```yaml
+spec:
+  replicas: 3  # Change from 1 to 3
+```
+
+#### 6. Apply Changes
+
+Run your updated deployment script:
+
+```bash
+bash deploy.sh
+```
+
+The system will:
+1. Create the new PVs.
+2. Update the ConfigMap.
+3. Scale the StatefulSet to 3 pods (k3s-kafka-0, k3s-kafka-1, k3s-kafka-2).
+4. The new brokers will join the cluster automatically.
+
+#### Important Notes
+
+*   **Existing Data**: Your existing data in `broker-0` is safe. We are only adding new folders.
+*   **Rebalancing**: Kafka will automatically start using the new brokers for new topics. For existing topics, you may need to run a partition reassignment tool if you want to spread them out immediately.

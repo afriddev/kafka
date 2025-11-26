@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: his-kafka
-  namespace: his-kafka
+  name: k3s-kafka
+  namespace: k3s-kafka
 spec:
-  serviceName: his-kafka-headless
+  serviceName: k3s-kafka-headless
   replicas: 1
   selector:
     matchLabels:
@@ -28,11 +28,11 @@ spec:
         - name: KAFKA_PROCESS_ROLES
           value: "broker,controller"
         - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-          value: "0@his-kafka-0.his-kafka-headless.his-kafka.svc.cluster.local:9093"
+          value: "0@k3s-kafka-0.k3s-kafka-headless.k3s-kafka.svc.cluster.local:9093"
         - name: KAFKA_LISTENERS
           value: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://$(POD_NAME).his-kafka-headless.his-kafka.svc.cluster.local:9092,EXTERNAL://EXTERNAL_IP:30092"
+          value: "PLAINTEXT://$(POD_NAME).k3s-kafka-headless.k3s-kafka.svc.cluster.local:9092,EXTERNAL://EXTERNAL_IP:30092"
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
           value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
         - name: KAFKA_CONTROLLER_LISTENER_NAMES
@@ -40,7 +40,7 @@ spec:
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: "PLAINTEXT"
         - name: CLUSTER_ID
-          value: "his-kafka-cluster-kraft"
+          value: "k3s-kafka-cluster-kraft"
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
           value: "1"
         - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
@@ -76,7 +76,7 @@ spec:
         - -c
         - |
           export KAFKA_NODE_ID=${HOSTNAME##*-}
-          export KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${POD_NAME}.his-kafka-headless.his-kafka.svc.cluster.local:9092,EXTERNAL://${NODE_IP:-localhost}:$((30092 + KAFKA_NODE_ID))
+          export KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${POD_NAME}.k3s-kafka-headless.k3s-kafka.svc.cluster.local:9092,EXTERNAL://${NODE_IP:-localhost}:$((30092 + KAFKA_NODE_ID))
           
           exec /etc/confluent/docker/run
         volumeMounts:
