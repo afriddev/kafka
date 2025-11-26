@@ -8,45 +8,39 @@ kubectl apply -f namespace/
 echo "Setting up storage..."
 kubectl apply -f storage/
 
-echo "Installing Strimzi operator and CRDs..."
-kubectl apply -f strimzi-operator.yaml
-echo "Waiting for operator..."
-kubectl wait deployment/strimzi-cluster-operator \
-  --for=condition=Available \
-  --timeout=300s \
-  -n his-kafka
+echo "Deploying Kafka StatefulSet..."
+kubectl apply -f kafka/kafka-config.yaml
+kubectl apply -f kafka/kafka-service.yaml
+kubectl apply -f kafka/kafka-statefulset.yaml
 
-echo "Deploying Kafka cluster..."
-kubectl apply -f kafka/cluster.yaml
-echo "Waiting for Kafka cluster..."
-kubectl wait kafka/his-kafka-cluster \
-  --for=condition=Ready \
+echo "Waiting for Kafka to be ready..."
+kubectl wait statefulset/his-kafka \
+  --for=jsonpath='{.status.readyReplicas}'=1 \
   --timeout=600s \
   -n his-kafka
 
 echo "Creating topics..."
-kubectl apply -f kafka/topic-hospital.yaml
-kubectl apply -f kafka/topic-designation.yaml
-kubectl apply -f kafka/topic-department.yaml
-
-echo "Waiting for topics..."
 sleep 10
-kubectl wait kafkatopic/hospital --for=condition=Ready --timeout=60s -n his-kafka
-kubectl wait kafkatopic/designation --for=condition=Ready --timeout=60s -n his-kafka
-kubectl wait kafkatopic/department --for=condition=Ready --timeout=60s -n his-kafka
+
+# Create topics using kafka-topics.sh
+for topic in hospital designation department; do
+  kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --create \
+    --bootstrap-server localhost:9092 \
+    --topic $topic \
+    --partitions 1 \
+    --replication-factor 1 \
+    --config compression.type=gzip \
+    --config retention.ms=604800000 \
+    --if-not-exists
+done
 
 echo "Deploying producer and consumer..."
 kubectl apply -f producer/
 kubectl apply -f consumer/
 
 echo ""
-echo "Deployment complete"
+echo "Deployment complete!"
 echo ""
 kubectl get pods -n his-kafka
-echo ""
-kubectl get svc -n his-kafka
-echo ""
-echo "Kafka cluster ready"
-echo "Producer: http://<node-ip>:30801"
-echo "Consumer: http://<node-ip>:30802"
-echo "Kafka: <node-ip>:30092"
+echo "Kafka cluster ready!"
+echo "Bootstrap server: <node-ip>:30092"
