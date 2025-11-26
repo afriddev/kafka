@@ -22,17 +22,21 @@ kubectl wait statefulset/his-kafka \
 echo "Creating topics..."
 sleep 10
 
-# Create topics using kafka-topics.sh
-for topic in hospital designation department; do
-  kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --create \
-    --bootstrap-server localhost:9092 \
-    --topic $topic \
-    --partitions 1 \
-    --replication-factor 1 \
-    --config compression.type=gzip \
-    --config retention.ms=604800000 \
-    --if-not-exists
-done
+# Create topics using declarative YAML manifests
+# Using 3 partitions for parallel processing and better throughput
+kubectl apply -f kafka/topic-hospital.yaml
+kubectl apply -f kafka/topic-department.yaml
+kubectl apply -f kafka/topic-designation.yaml
+
+# Wait for topic creation jobs to complete
+echo "Waiting for topic creation to complete..."
+kubectl wait --for=condition=complete --timeout=60s job/create-topic-hospital -n his-kafka
+kubectl wait --for=condition=complete --timeout=60s job/create-topic-department -n his-kafka
+kubectl wait --for=condition=complete --timeout=60s job/create-topic-designation -n his-kafka
+
+# Verify topics were created
+echo "Verifying topics..."
+kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
 
 echo "Deploying producer and consumer..."
 kubectl apply -f producer/

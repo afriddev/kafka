@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-topic-hospital
+  namespace: his-kafka
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: create-topic
+        image: confluentinc/cp-kafka:7.8.0
+        command:
+        - kafka-topics
+        - --bootstrap-server
+        - his-kafka-0.his-kafka-headless.his-kafka.svc.cluster.local:9092
+        - --create
+        - --topic
+        - hospital
+        - --partitions
+        - "3"
+        - --replication-factor
+        - "1"
+        - --config
+        - retention.ms=604800000
+        - --config
+        - compression.type=gzip
+        - --if-not-exists
