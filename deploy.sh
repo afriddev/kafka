@@ -19,33 +19,6 @@ kubectl wait statefulset/his-kafka \
   --timeout=600s \
   -n his-kafka
 
-echo "Creating topics..."
-sleep 10
-
-# Create topics using declarative YAML manifests
-# Using 3 partitions for parallel processing and better throughput
-kubectl apply -f kafka/topic-hospital.yaml
-kubectl apply -f kafka/topic-department.yaml
-kubectl apply -f kafka/topic-designation.yaml
-
-# Wait for topic creation jobs to complete
-echo "Waiting for topic creation to complete..."
-kubectl wait --for=condition=complete --timeout=60s job/create-topic-hospital -n his-kafka
-kubectl wait --for=condition=complete --timeout=60s job/create-topic-department -n his-kafka
-kubectl wait --for=condition=complete --timeout=60s job/create-topic-designation -n his-kafka
-
-# Verify topics were created
-echo "Verifying topics..."
-kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
-
-echo "Deploying producer and consumer..."
-# Delete existing pods to force update if they exist
-kubectl delete pod -n his-kafka -l app=kafka-producer --ignore-not-found
-kubectl delete pod -n his-kafka -l app=kafka-consumer --ignore-not-found
-
-kubectl apply -f producer/
-kubectl apply -f consumer/
-
 echo ""
 echo "Deployment complete!"
 echo ""
