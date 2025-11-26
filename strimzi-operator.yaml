@@ -18193,6 +18193,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: strimzi-cluster-operator
+  namespace: his-kafka
   labels:
     app: strimzi
 spec:
