@@ -1,0 +1,14 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: designation
+  namespace: his-kafka
+  labels:
+    strimzi.io/cluster: his-kafka-cluster
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 536870912
+    compression.type: gzip

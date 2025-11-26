@@ -1,0 +1,62 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: his-kafka-cluster
+  namespace: his-kafka
+spec:
+  kafka:
+    version: 3.8.0
+    replicas: 1
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: external
+        port: 9094
+        type: nodeport
+        tls: false
+        configuration:
+          bootstrap:
+            nodePort: 30092
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      num.partitions: 1
+      compression.type: gzip
+      log.retention.hours: 168
+      log.retention.bytes: 1073741824
+      log.segment.bytes: 536870912
+      auto.create.topics.enable: false
+    storage:
+      type: persistent-claim
+      size: 50Gi
+      class: kafka-local-storage
+      deleteClaim: false
+    resources:
+      requests:
+        memory: 2Gi
+        cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+  entityOperator:
+    topicOperator:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 200m
+    userOperator:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 200m
