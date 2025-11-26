@@ -39,6 +39,10 @@ echo "Verifying topics..."
 kubectl exec -n his-kafka his-kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
 
 echo "Deploying producer and consumer..."
+# Delete existing pods to force update if they exist
+kubectl delete pod -n his-kafka -l app=kafka-producer --ignore-not-found
+kubectl delete pod -n his-kafka -l app=kafka-consumer --ignore-not-found
+
 kubectl apply -f producer/
 kubectl apply -f consumer/
 

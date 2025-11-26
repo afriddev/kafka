@@ -4,6 +4,28 @@ metadata:
   name: consumer-config
   namespace: his-kafka
 data:
-  KAFKA_BOOTSTRAP_SERVERS: "his-kafka-cluster-kafka-bootstrap:9092"
+  KAFKA_BOOTSTRAP_SERVERS: "his-kafka-0.his-kafka-headless.his-kafka.svc.cluster.local:9092"
   KAFKA_TOPIC: "hospital"
   KAFKA_GROUP_ID: "consumer-group"
+  consumer.py: |
+    from kafka import KafkaConsumer
+    import json
+    import os
+
+    bootstrap_servers = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+    topic = os.environ.get('KAFKA_TOPIC', 'hospital')
+    group_id = os.environ.get('KAFKA_GROUP_ID', 'consumer-group')
+
+    print(f"Connecting to Kafka at {bootstrap_servers}...")
+    consumer = KafkaConsumer(
+        topic,
+        'department',  # Also subscribe to department topic
+        bootstrap_servers=bootstrap_servers,
+        group_id=group_id,
+        auto_offset_reset='earliest',
+        value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+    )
+    print(f"Connected! Listening on topics: {topic}, department")
+
+    for message in consumer:
+        print(f"Received from {message.topic} [partition {message.partition}]: {message.value}")
