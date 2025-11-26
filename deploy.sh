@@ -9,7 +9,7 @@ echo "Setting up storage..."
 kubectl apply -f storage/
 
 echo "Installing Strimzi operator and CRDs..."
-kubectl delete deployment strimzi-cluster-operator -n his-kafka --ignore-not-found
+kubectl apply -f strimzi-operator.yaml
 echo "Waiting for operator..."
 kubectl wait deployment/strimzi-cluster-operator \
   --for=condition=Available \
