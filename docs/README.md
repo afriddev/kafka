@@ -259,7 +259,7 @@ kubectl logs -n k3s-kafka k3s-kafka-0
 kubectl exec -n k3s-kafka k3s-kafka-0 -- \
   kafka-consumer-groups \
   --bootstrap-server localhost:9092 \
-  --group his-consumer-group \
+  --group k3s-consumer-group \
   --describe
 ```
 

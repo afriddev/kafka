@@ -24,11 +24,11 @@ import { ClientsModule, Transport } from "@nestjs/microservices";
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: "his-api",
+            clientId: "k3s-api",
             brokers: [process.env.KAFKA_BOOTSTRAP_SERVERS || "localhost:30092"],
           },
           consumer: {
-            groupId: "his-consumer-group",
+            groupId: "k3s-consumer-group",
           },
         },
       },
@@ -145,12 +145,12 @@ export class KafkaConsumerService implements OnModuleInit {
 
   constructor() {
     this.kafka = new Kafka({
-      clientId: "his-consumer",
+      clientId: "k3s-consumer",
       brokers: [process.env.KAFKA_BOOTSTRAP_SERVERS || "localhost:30092"],
     });
 
     this.consumer = this.kafka.consumer({
-      groupId: "his-consumer-group",
+      groupId: "k3s-consumer-group",
     });
   }
 
@@ -224,11 +224,11 @@ import { KafkaConsumerService } from "./kafka.consumer";
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: "his-api",
+            clientId: "k3s-api",
             brokers: [process.env.KAFKA_BOOTSTRAP_SERVERS || "localhost:30092"],
           },
           consumer: {
-            groupId: "his-consumer-group",
+            groupId: "k3s-consumer-group",
           },
         },
       },
@@ -315,7 +315,7 @@ async function bootstrap() {
         brokers: [process.env.KAFKA_BOOTSTRAP_SERVERS || "localhost:30092"],
       },
       consumer: {
-        groupId: "his-consumer-group",
+        groupId: "k3s-consumer-group",
       },
     },
   });
