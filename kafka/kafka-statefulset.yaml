@@ -75,14 +75,11 @@ spec:
         - sh
         - -c
         - |
-          # FORCE WIPE to fix node ID mismatch
-          rm -rf /var/lib/kafka/data/*
-          
           export KAFKA_NODE_ID=${HOSTNAME##*-}
           export KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${POD_NAME}.his-kafka-headless.his-kafka.svc.cluster.local:9092,EXTERNAL://${NODE_IP:-localhost}:$((30092 + KAFKA_NODE_ID))
           
-          # Format storage if needed
-          if [ ! -d /var/lib/kafka/data/meta.properties ]; then
+          # Format storage if needed (check for file, not directory)
+          if [ ! -f /var/lib/kafka/data/meta.properties ]; then
             kafka-storage format -t ${CLUSTER_ID} -c /etc/kafka/server.properties
           fi
           
