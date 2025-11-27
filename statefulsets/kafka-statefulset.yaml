@@ -3,9 +3,16 @@ kind: StatefulSet
 metadata:
   name: k3s-kafka
   namespace: k3s-kafka
+  labels:
+    app: kafka
+    component: broker
 spec:
   serviceName: k3s-kafka-headless
   replicas: 1
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
   selector:
     matchLabels:
       app: kafka

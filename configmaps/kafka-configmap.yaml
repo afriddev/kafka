@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: kafka-config
   namespace: k3s-kafka
+  labels:
+    app: kafka
+    component: broker
 data:
   server.properties: |
     process.roles=broker,controller
